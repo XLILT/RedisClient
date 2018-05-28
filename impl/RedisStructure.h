@@ -1,9 +1,15 @@
-/*************************************************************************
-    > File Name: impl/RedisStructure.h
-    > Author: mxl
-    > Mail: xiaolongicx@gmail.com
-    > Created Time: 2018-05-25 11:19
- ************************************************************************/
+/*
+*  COPYRIGHT NOTICE
+*  Xiaolong Ma
+*  All rights reserved.
+*
+*  @version : 1.0
+*  @author : mxl
+*  @E-mail : xiaolongicx@gmail.com
+*  @date : 2018/4/5
+*
+*  Revision Notes :
+*/
 
 #ifndef __IMPL_REDIS_STRUCTURE_H__
 #define __IMPL_REDIS_STRUCTURE_H__

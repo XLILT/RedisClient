@@ -1,9 +1,15 @@
-/*************************************************************************
-    > File Name: impl/RedisClient.h
-    > Author: mxl
-    > Mail: xiaolongicx@gmail.com
-    > Created Time: 2018-05-15 11:40
- ************************************************************************/
+/*
+*  COPYRIGHT NOTICE
+*  Xiaolong Ma
+*  All rights reserved.
+*
+*  @version : 1.0
+*  @author : mxl
+*  @E-mail : xiaolongicx@gmail.com
+*  @date : 2018/4/5
+*
+*  Revision Notes :
+*/
 
 #ifndef __IMPL_REDIS_CLIENT_H__
 #define __IMPL_REDIS_CLIENT_H__

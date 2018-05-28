@@ -1,9 +1,15 @@
-/*************************************************************************
-    > File Name: detail/HiRedisClient.h
-    > Author: mxl
-    > Mail: xiaolongicx@gmail.com
-    > Created Time: 2018-05-15 11:39
- ************************************************************************/
+/*
+*  COPYRIGHT NOTICE
+*  Xiaolong Ma
+*  All rights reserved.
+*
+*  @version : 1.0
+*  @author : mxl
+*  @E-mail : xiaolongicx@gmail.com
+*  @date : 2018/4/5
+*
+*  Revision Notes :
+*/
 
 #ifndef __DETAIL_HI_REDIS_CLIENT_H__
 #define __DETAIL_HI_REDIS_CLIENT_H__

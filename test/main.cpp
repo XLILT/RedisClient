@@ -1,9 +1,15 @@
-/*************************************************************************
-    > File Name: test/main.cpp
-    > Author: mxl
-    > Mail: xiaolongicx@gmail.com
-    > Created Time: 2018-05-15 10:52
- ************************************************************************/
+/*
+*  COPYRIGHT NOTICE
+*  Xiaolong Ma
+*  All rights reserved.
+*
+*  @version : 1.0
+*  @author : mxl
+*  @E-mail : xiaolongicx@gmail.com
+*  @date : 2018/4/5
+*
+*  Revision Notes :
+*/
 
 #include <iostream>
 #include <string>
