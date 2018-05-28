@@ -15,94 +15,114 @@
 #define __REDISSTRUCTURE_H__
 
 #include <vector>
+#include <string>
+#include <utility>
+#include <RedisClient/RedisClient.h>
 
 namespace redisclient {
 
-class RedisClient;
-class RedisReply;
+using StringArray = std::vector<std::string>;
+using MemberScorePair = std::pair<std::string, std::string>;
+using MemberScoreArray = std::vector<MemberScorePair>;
+using FieldValuePair = std::pair<std::string, std::string>;
+using FieldValueArray = std::vector<FieldValuePair>;
 
 class RedisStructure
 {
 public:
-    RedisStructure() {}
-    virtual ~RedisStructure() {}
+    RedisStructure();
+    virtual ~RedisStructure();
 
-    int bind_client(RedisClient * client);
+    void bind_client(RedisClient * client);
+    const char * get_error();
 
-private:
+protected:
+    bool expect_integer_reply(std::vector<const char *> &  argv_arr, const std::vector<size_t> & argvlen_arr, int * value);
+    bool expect_string_reply(std::vector<const char *> &  argv_arr, const std::vector<size_t> & argvlen_arr, std::string * value);
+
+protected:
     RedisClient * _client;
+    std::string _error_info;
 };
 
 class RedisList : public RedisStructure
 {
 public:
-    RedisList() {}
-    virtual ~RedisList() {}
+    RedisList();
+    virtual ~RedisList();
 
-    int push_front(const char * key, const char * value);
-    int push_back(const char * key, const char * value);
-    int pop_front(const char *key, RedisReply * reply = nullptr);
-    int pop_back(const char * key, RedisReply * reply = nullptr);
+    bool lpush(const std::string & key, const std::string & value, int * len = nullptr);
+    bool rpush(const std::string & key, const std::string & value, int * len = nullptr);
+    bool lpop(const std::string & key, std::string * value = nullptr);
+    bool rpop(const std::string & key, std::string * value = nullptr);
 
-    int get_item(const char * key, int index, RedisReply * reply);
+    bool lindex(const std::string & key, int index, std::string * value);
 
-    int length(const char * key);
-    int range(const char * key, int start, int end, RedisReply * reply);
+    bool llen(const std::string & key, int * len);
+    SharedPtrRedisReply lrange(const std::string & key, int start, int stop);
 };
 
 class RedisSet : public RedisStructure
 {
 public:
-    RedisSet() {}
-    virtual ~RedisSet() {}
+    RedisSet();
+    virtual ~RedisSet();
 
-    int add(const char * key, const char * value);
-    int rem(const char * key, const char * value);
-    int pop(const char * key, RedisReply * reply);
+    bool sadd(const std::string & key, const StringArray & member_array, int * add_count = nullptr);
+    bool srem(const std::string & key, const StringArray & member_array, int * rem_count = nullptr);
+    SharedPtrRedisReply spop(const std::string & key, uint32_t count);
 
-    int is_member(const char * key, const char * value);
-    int members(const char * key, RedisReply * reply);
-
-    int length(const char * key);    
+    bool sismember(const std::string & key, const std::string &member, int * is_member);
+    SharedPtrRedisReply smembers(const std::string & key);
+    bool scard(const std::string & key, int * len);    
 };
 
 class RedisZset : public RedisStructure
 {
 public:
-    RedisZset() {}
-    virtual ~RedisZset() {}
+    RedisZset();
+    virtual ~RedisZset();
 
-    int zadd(const char * key, float score, const char * member);
-    int zincby(const char * key, float increment, const char * member);
-    int zrem(const char * key, const char * member);
+    bool zadd(const std::string & key, const MemberScoreArray & ms_array, int * add_count = nullptr);
+    bool zincrby(const std::string & key, const std::string & increment, const std::string & member, std::string * score = nullptr);
+    bool zrem(const std::string & key, const StringArray & member_array, int * rem_count = nullptr);
+    bool zscore(const std::string & key, const std::string & member, std::string * score);
+    bool zrank(const std::string & key, const std::string & member, int * rank);
+    bool zrevrank(const std::string & key, const std::string & member, int * rank);
 
-    int zremrangebyrank(const char * key, int start, int end);
-    int zrange(const char * key, int start, int end, RedisReply * reply);
+    bool zcard(const std::string & key, int * len);
+
+    SharedPtrRedisReply zrange(const std::string & key, int start, int stop, bool withsscores = true);
+    SharedPtrRedisReply zrevrange(const std::string & key, int start, int stop, bool withscores = true);
 };
 
 class RedisHash : public RedisStructure
 {
 public:
-    RedisHash() {}
-    virtual ~RedisHash() {}
+    RedisHash();
+    virtual ~RedisHash();
 
-    int set(const char * key, const char * field, const char * value);
-    int get(const char * key, const char * field, RedisReply * reply);
-    int mset(const char * key, const std::vector<std::string> & fileds, std::vector<RedisReply>);
-    int mget(const char * key, const std::vector<std::string> & fileds, std::vector<RedisReply>);
+    bool hset(const std::string & key, const std::string & field, const std::string & value, int * add_count = nullptr);
+    bool hget(const std::string & key, const std::string & field, std::string * value);
 
-    int exist(const char * key, const char * field);
-    int del(const char * key, const char * field);
-    int incrby(const char * key, const char *field, )
+    bool hmset(const std::string & key, const FieldValueArray & fv_array);
+    SharedPtrRedisReply hmget(const std::string & key, const StringArray & field_array);
 
-    int get_all_fileds(const char * key, std::vector<std::string> & fileds);
-    int get_all_values(const char * key, std::vector<RedisReply>);
-    int get_all(const char * key, std::vector<std::string> & fileds, std::vector<RedisReply>);
+    bool hexists(const std::string & key, const std::string & field, int * is_exist);
+    bool hdel(const std::string & key, const StringArray & field_array, int * del_count = nullptr);
 
-    int length(const char * key);   
+    bool hincrby(const std::string & key, const std::string & field, int increment, int * value = nullptr);
+
+    bool hlen(const std::string & key, int * len);
+
+    SharedPtrRedisReply hkeys(const std::string & key);
+    SharedPtrRedisReply hvals(const std::string & key);
+    SharedPtrRedisReply hgetall(const std::string & key);
 };
 
 }   // namespace redisclient
+
+#include <RedisClient/impl/RedisStructure.h>
 
 #endif  // __REDISSTRUCTURE_H__
 

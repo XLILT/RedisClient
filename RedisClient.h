@@ -15,60 +15,103 @@
 #define __REDISCLIENT_H__
 
 #include <inttypes.h>
+#include <stddef.h>
+#include <string>
+#include <memory>
+#include <vector>
+
+#include <RedisClient/detail/HiRedisClientForward.h>
 
 namespace redisclient {
 
-class RedisReplyImpl;
-class RedisClientImpl;
+namespace detail {
+
+typedef HiRedisReply RedisReplyImpl; 
+
+typedef HiRedisClient RedisClientImpl; 
+
+}   //namespace detail
 
 class RedisReply
 {
 public:
-    RedisReply() {}
-    virtual ~RedisReply() {}
+    enum ReplyType
+    {
+        REPLY_STRING = 1,
+        REPLY_ARRAY = 2,
+        REPLY_INTEGER = 3,
+        REPLY_NIL = 4,
+        REPLY_STATUS = 5,
+        REPLY_ERROR = 6,
+    };
 
-    int bind_reply(void * reply);
+public:
+    explicit RedisReply(detail::RedisReplyImpl * impl, bool is_root = true);
+
+    virtual ~RedisReply();
+
+    void bind_reply(void * reply);
     
     int type();
+
     const char * get_str();
-    int get_strlen();
+    size_t get_strlen();
+    int32_t get_int32();
     int64_t get_int64();
 
     size_t get_array_size();
     RedisReply * get_element(int index);
 
 private:
-    RedisReplyImpl * _impl;
+    detail::RedisReplyImpl * _impl;
+
+    bool _is_root;
+    std::vector<RedisReply *> _sub_arr;
 };
+
+using SharedPtrRedisReply = std::shared_ptr<RedisReply>;
 
 class RedisClient
 {
-public:
-    RedisClient() {}
-    virtual ~RedisClient() {}
+friend class RedisList;
 
-    int connect(const char &ip, int port = 6379, const char * prefix = "");
+public:
+    RedisClient(); 
+    virtual ~RedisClient();
+
+    const char * get_error();
+
+    const char * prefix();
+
+    bool connect(const char * ip, int port = 6379, const char * prefix = "", int timeout_ms = 1500);
     void close();
     bool is_connected();
 
-    int set(const char * key, const char * value, int expire_sec);
-    int get(const char *key, RedisReply & reply);
-    int del(const char * key);
-    int inc(const char * key);
-    int dec(const char * key);
-    int expire(const char * key , int sec);
-    int ttl(const char * key);
-    int persist(const char * key);
-    int exists(const char * key);
+    bool auth(const std::string & passwd);
 
-    int exec_command(RedisReply & reply, int argc, const char ** argv, const size_t argvlen);
+    bool set(const std::string & key, const std::string & value, int expire_sec = 0);
+    bool get(const std::string & key, std::string & value);
+    bool del(const std::string & key, int * value = nullptr);
+    bool exists(const std::string & key, int * value);
 
-pravite:
-    RedisClientImpl * _impl;
+    bool incr(const std::string & key, int * value = nullptr);
+    bool decr(const std::string & key, int * value = nullptr);
 
+    bool expire(const std::string & key, int sec, int * value = nullptr);
+    bool ttl(const std::string & key, int * value);
+    bool persist(const std::string & key, int * value = nullptr);
+
+    SharedPtrRedisReply exec_commandv(const char * format, va_list ap);
+    SharedPtrRedisReply exec_command(const char * format, ...);
+    SharedPtrRedisReply exec_command_argv(int argc, const char ** argv, const size_t * argvlen);
+
+protected:
+    detail::RedisClientImpl * _impl;
 };
 
 }   // namespace redisclient
+
+#include <RedisClient/impl/RedisClient.h>
 
 #endif  // __REDISCLIENT_H__
 
