@@ -38,6 +38,12 @@ inline const char * RedisStructure::get_error()
 
 inline bool RedisStructure::expect_integer_reply(std::vector<const char *> &  argv_arr, const std::vector<size_t> & argvlen_arr, int * value)
 {
+    if(!_client)
+    {
+        _error_info = "need to bind client first";
+        return false;
+    }
+
     bool ret = true;
 
     SharedPtrRedisReply reply = _client->exec_command_argv(argv_arr.size(), &argv_arr[0], &argvlen_arr[0]);
@@ -82,6 +88,12 @@ inline bool RedisStructure::expect_integer_reply(std::vector<const char *> &  ar
 
 inline bool RedisStructure::expect_string_reply(std::vector<const char *> &  argv_arr, const std::vector<size_t> & argvlen_arr, std::string * value)
 {
+    if(!_client)
+    {
+        _error_info = "need to bind client first";
+        return false;
+    }
+
     bool ret = true;
 
     SharedPtrRedisReply reply = _client->exec_command_argv(argv_arr.size(), &argv_arr[0], &argvlen_arr[0]);
@@ -134,6 +146,7 @@ inline bool RedisList::lpush(const std::string & key, const std::string & value,
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -160,6 +173,7 @@ inline bool RedisList::rpush(const std::string & key, const std::string & value,
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -186,6 +200,7 @@ inline bool RedisList::lpop(const std::string & key, std::string * value)
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -209,6 +224,7 @@ inline bool RedisList::rpop(const std::string & key, std::string * value)
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -232,6 +248,7 @@ inline bool RedisList::lindex(const std::string & key, int index, std::string * 
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -261,6 +278,7 @@ inline bool RedisList::llen(const std::string & key, int * len)
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -284,6 +302,7 @@ inline SharedPtrRedisReply RedisList::lrange(const std::string & key, int start,
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return nullptr;
     }
 
@@ -325,6 +344,7 @@ inline bool RedisSet::sadd(const std::string & key, const StringArray & member_a
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -359,6 +379,7 @@ inline bool RedisSet::srem(const std::string & key, const StringArray & member_a
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -393,6 +414,7 @@ inline SharedPtrRedisReply RedisSet::spop(const std::string & key, uint32_t coun
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return nullptr;
     }
 
@@ -422,6 +444,7 @@ inline bool RedisSet::sismember(const std::string & key, const std::string &memb
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -448,6 +471,7 @@ inline SharedPtrRedisReply RedisSet::smembers(const std::string & key)
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return nullptr;
     }
 
@@ -471,6 +495,7 @@ inline bool RedisSet::scard(const std::string & key, int * len)
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -500,6 +525,7 @@ inline bool RedisZset::zadd(const std::string & key, const MemberScoreArray & ms
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -538,6 +564,7 @@ inline bool RedisZset::zincrby(const std::string & key, const std::string & incr
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -567,6 +594,7 @@ inline bool RedisZset::zrem(const std::string & key, const StringArray & member_
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -601,6 +629,7 @@ inline bool RedisZset::zscore(const std::string & key, const std::string & membe
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -627,6 +656,7 @@ inline bool RedisZset::zrank(const std::string & key, const std::string & member
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -653,6 +683,7 @@ inline bool RedisZset::zrevrank(const std::string & key, const std::string & mem
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -679,6 +710,7 @@ inline bool RedisZset::zcard(const std::string & key, int * len)
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -702,6 +734,7 @@ inline SharedPtrRedisReply RedisZset::zrange(const std::string & key, int start,
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return nullptr;
     }
 
@@ -745,6 +778,7 @@ inline SharedPtrRedisReply RedisZset::zrevrange(const std::string & key, int sta
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return nullptr;
     }
 
@@ -794,6 +828,7 @@ bool RedisHash::hset(const std::string & key, const std::string & field, const s
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -823,6 +858,7 @@ bool RedisHash::hget(const std::string & key, const std::string & field, std::st
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -849,6 +885,7 @@ bool RedisHash::hmset(const std::string & key, const FieldValueArray & fv_array)
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -920,6 +957,7 @@ SharedPtrRedisReply RedisHash::hmget(const std::string & key, const StringArray 
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return nullptr;
     }
 
@@ -954,6 +992,7 @@ bool RedisHash::hexists(const std::string & key, const std::string & field, int 
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -980,6 +1019,7 @@ bool RedisHash::hdel(const std::string & key, const StringArray & field_array, i
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -1014,6 +1054,7 @@ bool RedisHash::hincrby(const std::string & key, const std::string & field, int 
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -1046,6 +1087,7 @@ bool RedisHash::hlen(const std::string & key, int * len)
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return false;
     }
 
@@ -1069,6 +1111,7 @@ SharedPtrRedisReply RedisHash::hkeys(const std::string & key)
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return nullptr;
     }
 
@@ -1092,6 +1135,7 @@ SharedPtrRedisReply RedisHash::hvals(const std::string & key)
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return nullptr;
     }
 
@@ -1115,6 +1159,7 @@ SharedPtrRedisReply RedisHash::hgetall(const std::string & key)
 {
     if(!_client)
     {
+        _error_info = "need to bind client first";
         return nullptr;
     }
 

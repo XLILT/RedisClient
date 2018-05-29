@@ -42,14 +42,8 @@ inline RedisReply::~RedisReply()
         if(_impl)
         {
             delete _impl;
-            _impl = nullptr;
         }
     }
-}
-
-inline void RedisReply::bind_reply(void * reply)
-{
-    _impl->bind_reply(reply);
 }
 
 inline int RedisReply::type()
@@ -109,9 +103,9 @@ RedisReply * RedisReply::get_element(int index)
     return _sub_arr[index];
 }
 
-inline RedisClient::RedisClient()
+inline RedisClient::RedisClient(const char * ip, int port, const char * prefix, int timeout_ms)
 {
-    _impl = new detail::RedisClientImpl();
+    _impl = new detail::RedisClientImpl(ip, port, prefix, timeout_ms);
 }
 
 inline RedisClient::~RedisClient()
@@ -119,7 +113,6 @@ inline RedisClient::~RedisClient()
     if(_impl)
     {
         delete _impl;
-        _impl = nullptr;
     }
 }
 
@@ -133,20 +126,20 @@ inline const char * RedisClient::prefix()
     return _impl->prefix();
 }
 
-inline bool RedisClient::connect(const char * ip, int port, const char * prefix, int timeout_ms)
-{
-   return _impl->connect(ip, port, prefix, timeout_ms); 
-}
-
-inline void  RedisClient::close()
-{
-    _impl->close();
-}
-
-inline bool RedisClient::is_connected()
-{
-    return _impl->is_connected();
-}
+//inline bool RedisClient::connect(const char * ip, int port, const char * prefix, int timeout_ms)
+//{
+//   return _impl->connect(ip, port, prefix, timeout_ms); 
+//}
+//
+//inline void  RedisClient::close()
+//{
+//    _impl->close();
+//}
+//
+//inline bool RedisClient::is_connected()
+//{
+//    return _impl->is_connected();
+//}
 
 inline bool RedisClient::auth(const std::string & passwd)
 {
@@ -158,7 +151,7 @@ inline bool RedisClient::set(const std::string & key, const std::string & value,
     return _impl->set(key, value, expire_sec);
 }
 
-inline bool RedisClient::get(const std::string & key, std::string & value)
+inline bool RedisClient::get(const std::string & key, std::string * value)
 {
     return _impl->get(key, value);
 }

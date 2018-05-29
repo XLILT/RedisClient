@@ -27,105 +27,106 @@ using namespace redisclient;
 const char * host = "127.0.0.1";
 int port = 6379;
 
-void test_conn()
-{
-    RedisClient client;
-    assert(!client.is_connected());
-    assert(client.connect(host, port));
-    assert(std::string(client.get_error()).empty());
-    assert(client.is_connected());
+//void test_conn()
+//{
+//    RedisClient client(host, port);
+//    assert(!client.is_connected());
+//    
+//    assert(std::string(client.get_error()).empty());
+//    assert(client.is_connected());
+//
+//    assert(!client.connect(host, 1));
+//    assert(!std::string(client.get_error()).empty());
+//}
 
-    assert(!client.connect(host, 1));
-    assert(!std::string(client.get_error()).empty());
-}
-
-void test_close_is_connected()
-{
-    RedisClient client;
-    assert(client.connect(host, port));
-    assert(std::string(client.get_error()).empty());
-
-    assert(client.is_connected());
-    client.close();
-    assert(!client.is_connected());
-}
+//void test_close_is_connected()
+//{
+//    RedisClient client(host, port);
+//    
+//    assert(std::string(client.get_error()).empty());
+//
+//    assert(client.is_connected());
+//    
+//    assert(!client.is_connected());
+//}
 
 void test_set()
 {
-    RedisClient client;
-    assert(client.connect(host, port));
+    RedisClient client(host, port);
+    
 
     char buf[10] = {0};
     assert(client.set("test_set_k", std::string(buf, sizeof(buf)), 10));
     assert(client.set("test_set_k1", "1 2 3", 10));
-
-    client.close();
 }
 
 void test_auth()
 {
-    RedisClient client;
-    assert(client.connect("192.168.0.49", 20806));
+    RedisClient client("192.168.0.49", 20806);
 
     assert(client.auth("test|test"));
-
-    client.close();
 }
 
 void test_get()
 {
-    RedisClient client;
-    assert(client.connect(host, port));
+    RedisClient client(host, port, "test:");
 
     assert(client.set("test_get_k1", "1", 60));
+
+    //std::string tmp_str;
+    //std::cin >> tmp_str;
+
     std::string ret_str;
-    assert(client.get("test_get_k1", ret_str));
+
+    //if(!client.get("test_get_k1", &ret_str))
+    //{
+    //    std::cout << client.get_error() << std::endl;
+    //}
+
+    assert(client.get("test_get_k1", &ret_str));
     assert(ret_str == "1");
 
     char binary_buf[] = {1, 2, 3};
     assert(client.set("test_get_k2", std::string(binary_buf, sizeof(binary_buf)), 60));
-    assert(client.get("test_get_k2", ret_str));
+    assert(client.get("test_get_k2", &ret_str));
     assert(ret_str.size() == sizeof(binary_buf));
     for(size_t i = 0; i < ret_str.size(); i++)
     {
         assert(binary_buf[i] == ret_str[i]);
     }
 
-    client.close();
+    client.del("test_get_k1"); 
+    client.del("test_get_k2"); 
 }
 
 void test_prefix()
 {
-    RedisClient client;
-    assert(client.connect(host, port, "prefix1"));
+    RedisClient client(host, port, "prefix1");
 
     client.del("test_prefix_k1");
 
     assert(client.set("test_prefix_k1", "1 2 3", 10));
     std::string ret_str;
-    assert(client.get("test_prefix_k1", ret_str));
+    assert(client.get("test_prefix_k1", &ret_str));
     assert(ret_str == "1 2 3");
 
-    RedisClient client2;
-    assert(client2.connect(host, port, "prefix2"));
+    RedisClient client2(host, port, "prefix2");
 
     client2.del("test_prefix_k1");
 
     assert(client2.set("test_prefix_k1", "321", 10));
-    assert(client2.get("test_prefix_k1", ret_str));
+    assert(client2.get("test_prefix_k1", &ret_str));
     assert(ret_str == "321");
 
     client.del("test_prefix_k1");
     client2.del("test_prefix_k1");
-
-    client.close();
-    client2.close();
+    
 }
 
 void test_del()
 {
-    RedisClient client;
-    assert(client.connect(host, port));
+    RedisClient client(host, port);
+    
 
     assert(client.set("test_del_k1", "1", 60));
     int ret = -1;
@@ -136,13 +137,13 @@ void test_del()
 
     assert(client.del("test_del_k3", nullptr));
 
-    client.close();
+    
 }
 
 void test_exists()
 {
-    RedisClient client;
-    assert(client.connect(host, port));
+    RedisClient client(host, port);
+    
 
     assert(client.set("test_exists_k1", "1", 60));
     int ret = -1;
@@ -152,13 +153,13 @@ void test_exists()
     assert(client.exists("test_exists_k1", &ret));
     assert(0 == ret);
 
-    client.close();
+    
 }
 
 void test_incr()
 {
-    RedisClient client;
-    assert(client.connect(host, port));
+    RedisClient client(host, port);
+    
 
     int ret = -1;
     assert(client.incr("test_incr_k1", &ret));
@@ -168,13 +169,13 @@ void test_incr()
 
     assert(client.del("test_incr_k1", nullptr));
 
-    client.close();
+    
 }
 
 void test_decr()
 {
-    RedisClient client;
-    assert(client.connect(host, port));
+    RedisClient client(host, port);
+    
 
     int ret = -1;
     assert(client.decr("test_decr_k1", &ret));
@@ -184,13 +185,13 @@ void test_decr()
 
     assert(client.del("test_decr_k1", nullptr));
 
-    client.close();
+    
 }
 
 void test_expire_ttl_presist()
 {
-    RedisClient client;
-    assert(client.connect(host, port));
+    RedisClient client(host, port);
+    
 
     assert(client.set("test_expire_ttl_presist_k1", "1"));
     int ret = 0;
@@ -212,13 +213,13 @@ void test_expire_ttl_presist()
     assert(ret == -1);
     assert(client.del("test_expire_ttl_presist_k1", nullptr));
 
-    client.close();
+    
 }
 
 void test_exec_command()
 {
-    RedisClient client;
-    assert(client.connect(host, port));
+    RedisClient client(host, port);
+    
 
     SharedPtrRedisReply reply = client.exec_command("SET %s %d", "test_exec_command_k1", 1);
     assert(reply);
@@ -230,13 +231,13 @@ void test_exec_command()
     assert(reply->get_int32() == 1);
     assert(reply->get_int64() == 1);
 
-    client.close();
+    
 }
 
 void test_exec_command_argv()
 {
-    RedisClient client;
-    assert(client.connect(host, port));
+    RedisClient client(host, port);
+    
     
     std::vector<const char *>  argv_arr;
     std::vector<size_t> argvlen_arr;
@@ -273,13 +274,13 @@ void test_exec_command_argv()
     assert(reply->get_int32() == 1);
     assert(reply->get_int64() == 1);
 
-    client.close();
+    
 }
 
 void test_list()
 {
-    RedisClient client;
-    assert(client.connect(host, port));
+    RedisClient client(host, port);
+    
     
     RedisList list;
     list.bind_client(&client);
@@ -350,14 +351,14 @@ void test_list()
     client.del("test_list_k3", nullptr);
     client.del("test_list_k4", nullptr);
 
-    client.close();
+    
 
 }
 
 void test_set_structure()
 {
-    RedisClient client;
-    assert(client.connect(host, port));
+    RedisClient client(host, port);
+    
     
     RedisSet set;
     set.bind_client(&client);
@@ -415,13 +416,13 @@ void test_set_structure()
             || strcmp(reply->get_element(1)->get_str(), "4") == 0);
 
     client.del("test_set_structure_k1", nullptr);
-    client.close();
+    
 }
 
 void test_zset()
 {
-    RedisClient client;
-    assert(client.connect(host, port));
+    RedisClient client(host, port);
+    
     
     RedisZset zset;
     zset.bind_client(&client);
@@ -541,13 +542,12 @@ void test_zset()
     assert(strcmp(reply->get_element(1)->get_str(), "m1") == 0);
 
     client.del("test_zset_k1", nullptr);
-    client.close();
+    
 }
 
 void test_hash()
 {
-    RedisClient client;
-    assert(client.connect(host, port, "test:"));
+    RedisClient client(host, port, "test:");
     
     RedisHash hash;
     hash.bind_client(&client);
@@ -653,13 +653,12 @@ void test_hash()
     assert(strcmp(reply->get_element(3)->get_str(), "14") == 0);
 
     client.del("test_hash_k1");
-    client.close();
 }
 
 int main()
 {
-    test_conn();
-    test_close_is_connected();
+    //test_conn();
+    //test_close_is_connected();
     test_auth();
     test_set();
     test_get();

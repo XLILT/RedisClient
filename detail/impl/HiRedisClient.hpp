@@ -82,10 +82,14 @@ inline HiRedisReply * HiRedisReply::get_element(int index)
     return reply;
 }
 
-inline HiRedisClient::HiRedisClient()
+inline HiRedisClient::HiRedisClient(const char * ip, int port, const char * prefix, int timeout_ms)
     :_ctx(nullptr),
      _error_info(),
-    _prefix()
+     _ip(ip),
+     _port(port),
+    _prefix(prefix),
+    _timeout_ms(timeout_ms),
+    _passwd()
 {}
 
 inline HiRedisClient::~HiRedisClient()
@@ -103,38 +107,6 @@ inline const char * HiRedisClient::prefix()
     return _prefix.c_str();
 }
 
-inline bool HiRedisClient::connect(const char * ip, int port, const char * prefix, int timeout_ms)
-{
-	bool ret = true;
-
-    int second = timeout_ms / 1000;
-    int millisecond = timeout_ms % 1000;
-    struct timeval timeout = { second, millisecond * 1000 };
-
-    close();   
-
-    _ctx = redisConnectWithTimeout(ip, port, timeout);
-
-	if (_ctx == NULL || _ctx->err) {
-        if (_ctx) {
-            _error_info = _ctx->errstr;
-            
-            redisFree(_ctx);
-            _ctx = nullptr;
-
-            ret = false;
-        } else {
-            _error_info = "Connection error: can't allocate redis context";
-
-            ret = false;
-        }
-    }
-
-    _prefix = prefix;
-
-    return ret;
-}
-
 void HiRedisClient::close()
 {
     if(_ctx)
@@ -144,24 +116,16 @@ void HiRedisClient::close()
     }
 }
 
-bool HiRedisClient::is_connected()
+inline bool HiRedisClient::auth(const std::string & passwd)
 {
     if(!_ctx)
     {
-        return false;
+        if(!reconnect())
+        {
+            return false;
+        }
     }
 
-    redisReply * reply = static_cast<redisReply *>(redisCommand(_ctx, "PING"));
-    if(reply && reply->type == REDIS_REPLY_STATUS && 0 == strcasecmp(reply->str, "PONG"))
-    {
-        return true;
-    }
-
-    return false;
-}
-
-inline bool HiRedisClient::auth(const std::string & passwd)
-{
     bool ret = true;
 
     std::vector<const char *>  argv_arr;
@@ -176,12 +140,23 @@ inline bool HiRedisClient::auth(const std::string & passwd)
 
     redisReply * reply = static_cast<redisReply *>(redisCommandArgv(_ctx, argv_arr.size(), &argv_arr[0], &argvlen_arr[0]));
 
+    if(!reply)
+    {
+        if(reconnect())
+        {
+            reply = static_cast<redisReply *>(redisCommandArgv(_ctx, argv_arr.size(), &argv_arr[0], &argvlen_arr[0]));
+        }
+    }
+
     do
     {
         if(!reply)
         {
+            close();
+
             ret = false;
             _error_info = "reply is null";
+
             break;
         }
 
@@ -203,6 +178,8 @@ inline bool HiRedisClient::auth(const std::string & passwd)
             _error_info = error_str;
             break;                
         }
+
+        _passwd = passwd;
     }while(0);
        
     return ret;
@@ -210,6 +187,14 @@ inline bool HiRedisClient::auth(const std::string & passwd)
 
 bool HiRedisClient::set(const std::string & key, const std::string & value, int expire_sec)
 {
+    if(!_ctx)
+    {
+        if(!reconnect())
+        {
+            return false;
+        }
+    }
+
     bool ret = true;
 
     std::vector<const char *>  argv_arr;
@@ -241,11 +226,21 @@ bool HiRedisClient::set(const std::string & key, const std::string & value, int 
     }
 
     redisReply * reply = static_cast<redisReply *>(redisCommandArgv(_ctx, argv_arr.size(), &argv_arr[0], &argvlen_arr[0]));
+    
+    if(!reply)
+    {
+        if(reconnect())
+        {
+            reply = static_cast<redisReply *>(redisCommandArgv(_ctx, argv_arr.size(), &argv_arr[0], &argvlen_arr[0]));
+        }
+    }
 
     do
     {
         if(!reply)
         {
+            close();
+
             ret = false;
             _error_info = "reply is null";
             break;
@@ -274,9 +269,15 @@ bool HiRedisClient::set(const std::string & key, const std::string & value, int 
     return ret;
 }
 
-inline bool HiRedisClient::get(const std::string & key, std::string & value)
+inline bool HiRedisClient::get(const std::string & key, std::string * value)
 {
-    bool ret = true;
+    if(!_ctx)
+    {
+        if(!reconnect())
+        {
+            return false;
+        }
+    }
 
     std::vector<const char *>  argv_arr;
     std::vector<size_t> argvlen_arr;
@@ -291,40 +292,7 @@ inline bool HiRedisClient::get(const std::string & key, std::string & value)
     argv_arr.emplace_back(real_key.c_str());
     argvlen_arr.emplace_back(real_key.size());
 
-    redisReply * reply = static_cast<redisReply *>(redisCommandArgv(_ctx, argv_arr.size(), &argv_arr[0], &argvlen_arr[0]));
-
-    do
-    {
-        if(!reply)
-        {
-            ret = false;
-            _error_info = "reply is null";
-            break;
-        }
-        
-        if(reply->type == REDIS_REPLY_ERROR)
-        {
-            ret = false;
-
-            _error_info = reply->str;
-            break;                
-        }
-        
-        if(reply->type != REDIS_REPLY_STRING)
-        {
-            ret = false;
-            
-            char error_str[128] = {0};
-            snprintf(error_str, sizeof(error_str), "reply type is not REDIS_REPLY_STRING but %d", reply->type);
-
-            _error_info = error_str;
-            break;                
-        }
-
-        value.assign(reply->str, reply->len);
-    }while(0);
-    
-    return ret;
+    return expect_string_reply(argv_arr, argvlen_arr, value);
 }
 
 inline bool HiRedisClient::del(const std::string & key, int * value)
@@ -349,6 +317,14 @@ inline bool HiRedisClient::decr(const std::string & key, int * value)
 
 inline bool HiRedisClient::expire(const std::string & key, int sec, int * value)
 {
+    if(!_ctx)
+    {
+        if(!reconnect())
+        {
+            return false;
+        }
+    }
+
     std::vector<const char *>  argv_arr;
     std::vector<size_t> argvlen_arr;
 
@@ -383,6 +359,14 @@ inline bool HiRedisClient::persist(const std::string & key, int * value)
 
 inline bool HiRedisClient::expect_integer_reply(const char * cmd, const std::string & key, int * value)
 {
+    if(!_ctx)
+    {
+        if(!reconnect())
+        {
+            return false;
+        }
+    }
+
     std::vector<const char *>  argv_arr;
     std::vector<size_t> argvlen_arr;
 
@@ -400,14 +384,32 @@ inline bool HiRedisClient::expect_integer_reply(const char * cmd, const std::str
 
 bool HiRedisClient::expect_integer_reply(std::vector<const char *> &  argv_arr, const std::vector<size_t> & argvlen_arr, int * value)
 {
+    if(!_ctx)
+    {
+        if(!reconnect())
+        {
+            return false;
+        }
+    }
+
     bool ret = true;
 
     redisReply * reply = static_cast<redisReply *>(redisCommandArgv(_ctx, argv_arr.size(), &argv_arr[0], &argvlen_arr[0]));
+
+    if(!reply)
+    {
+        if(reconnect())
+        {
+            reply = static_cast<redisReply *>(redisCommandArgv(_ctx, argv_arr.size(), &argv_arr[0], &argvlen_arr[0]));
+        }
+    }
 
     do
     {
         if(!reply)
         {
+            close();
+
             ret = false;
             _error_info = "reply is null";
             break;
@@ -441,24 +443,175 @@ bool HiRedisClient::expect_integer_reply(std::vector<const char *> &  argv_arr, 
     return ret;
 }
 
+bool HiRedisClient::expect_string_reply(std::vector<const char *> &  argv_arr, const std::vector<size_t> & argvlen_arr, std::string * value)
+{
+    if(!_ctx)
+    {
+        if(!reconnect())
+        {
+            return false;
+        }
+    }
+
+    bool ret = true;
+
+    redisReply * reply = static_cast<redisReply *>(redisCommandArgv(_ctx, argv_arr.size(), &argv_arr[0], &argvlen_arr[0]));
+    
+    if(!reply)
+    {
+        reply = static_cast<redisReply *>(redisCommandArgv(_ctx, argv_arr.size(), &argv_arr[0], &argvlen_arr[0]));
+    }
+
+    do
+    {
+        if(!reply)
+        {
+            close();
+
+            ret = false;
+            _error_info = "reply is null";
+
+            break;
+        }
+
+        if(reply->type == REDIS_REPLY_ERROR)
+        {
+            ret = false;
+
+            _error_info = reply->str;
+            break;                
+        }
+
+        if(reply->type != REDIS_REPLY_STRING)
+        {
+            ret = false;
+            
+            char error_str[128] = {0};
+            snprintf(error_str, sizeof(error_str), "reply type is not REDIS_REPLY_STRING but %d", reply->type);
+
+            _error_info = error_str;
+            break;                
+        }
+
+        if(value)
+        {
+            value->assign(reply->str, reply->len);
+        }
+    }while(0);
+    
+    return ret;
+}
+
 HiRedisReply * HiRedisClient::exec_commandv(const char * format, va_list ap)
 {
-    redisReply * reply = static_cast<redisReply *>(redisvCommand(_ctx, format, ap));
-    HiRedisReply * hireply = new HiRedisReply();
-    hireply->bind_reply(reply);
+    if(!_ctx)
+    {
+        if(!reconnect())
+        {
+            return nullptr;
+        }
+    }
 
+    redisReply * reply = static_cast<redisReply *>(redisvCommand(_ctx, format, ap));
+
+    if(!reply)
+    {
+        if(reconnect())
+        {
+            reply = static_cast<redisReply *>(redisvCommand(_ctx, format, ap));
+        }
+    }
+
+    HiRedisReply * hireply = nullptr;
+
+    if(!reply)
+    {
+        close();
+    }
+    else
+    {
+        hireply = new HiRedisReply();
+        hireply->bind_reply(reply);
+    }
+   
     return hireply;
 }
 
 inline HiRedisReply * HiRedisClient::exec_command_argv(int argc, const char ** argv, const size_t * argvlen)
 {
-    redisReply * reply = static_cast<redisReply *>(redisCommandArgv(_ctx, argc, argv, argvlen));
-    HiRedisReply * hireply = new HiRedisReply();
-    hireply->bind_reply(reply);
+    if(!_ctx)
+    {
+        if(!reconnect())
+        {
+            return nullptr;
+        }
+    }
 
+    redisReply * reply = static_cast<redisReply *>(redisCommandArgv(_ctx, argc, argv, argvlen));
+
+    if(!reply)
+    {
+        if(reconnect())
+        {
+            reply = static_cast<redisReply *>(redisCommandArgv(_ctx, argc, argv, argvlen));
+        }
+    }
+
+    HiRedisReply * hireply = nullptr;
+
+    if(!reply)
+    {
+        close();
+    }
+    else
+    {
+        hireply = new HiRedisReply();
+        hireply->bind_reply(reply);
+    }
+   
     return hireply;
 }
 
+inline bool HiRedisClient::reconnect()
+{
+    if(_ctx)
+    {
+        redisFree(_ctx);
+        _ctx = nullptr;
+    }
+
+    bool ret = true;
+
+    int second = _timeout_ms / 1000;
+    int millisecond = _timeout_ms % 1000;
+    struct timeval timeout = { second, millisecond * 1000 };
+
+    _ctx = redisConnectWithTimeout(_ip.c_str(), _port, timeout);
+
+    if (_ctx == NULL || _ctx->err) {
+        if (_ctx) {
+            _error_info = _ctx->errstr;
+            
+            redisFree(_ctx);
+            _ctx = nullptr;
+
+            ret = false;
+        } else {
+            _error_info = "Connection error: can't allocate redis context";
+
+            ret = false;
+        }
+    }
+    else 
+    {
+        if(!_passwd.empty())
+        {
+            ret = auth(_passwd);
+        }
+    }
+
+    return ret;
+}
 }   //namespace detail
 }   //namespace redisclient
 

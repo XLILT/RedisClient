@@ -48,21 +48,20 @@ private:
 class HiRedisClient
 {
 public:
-    HiRedisClient();
+    HiRedisClient(const char * ip, int port, const char * prefix, int timeout_ms);
     virtual ~HiRedisClient();
 
     const char * get_error();
 
     const char * prefix();
 
-    bool connect(const char * ip, int port, const char * prefix, int timeout_ms);
-    void close();
-    bool is_connected();
+    //bool connect(const char * ip, int port, const char * prefix, int timeout_ms);
+    //bool is_connected();
 
     bool auth(const std::string & passwd);
 
     bool set(const std::string & key, const std::string & value, int expire_sec);
-    bool get(const std::string & key, std::string & value);
+    bool get(const std::string & key, std::string * value);
     bool del(const std::string & key, int * value);
     bool exists(const std::string & key, int * value);
 
@@ -76,19 +75,27 @@ public:
     HiRedisReply * exec_commandv(const char * format, va_list ap);
     HiRedisReply * exec_command_argv(int argc, const char ** argv, const size_t * argvlen);
 
-private:
+protected:
+    bool reconnect();
+    void close();
+
     bool expect_integer_reply(const char * cmd, const std::string & key, int * value);
     bool expect_integer_reply(std::vector<const char *> &  argv_arr, const std::vector<size_t> & argvlen_arr, int * value);
+    bool expect_string_reply(std::vector<const char *> &  argv_arr, const std::vector<size_t> & argvlen_arr, std::string * value);
 
 private:
     redisContext * _ctx;
     std::string _error_info; 
+    std::string _ip;
+    int _port;
     std::string _prefix;
+    int _timeout_ms;
+    std::string _passwd;
 };
 
 }   //namespace detail
 }   //namespace redisclient
 
-#include <RedisClient/detail/impl/HiRedisClient.h>
+#include <RedisClient/detail/impl/HiRedisClient.hpp>
 
 #endif    //__DETAIL_HI_REDIS_CLIENT_H__

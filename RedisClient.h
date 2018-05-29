@@ -48,9 +48,9 @@ public:
 public:
     explicit RedisReply(detail::RedisReplyImpl * impl, bool is_root = true);
 
-    virtual ~RedisReply();
+    ~RedisReply();
 
-    void bind_reply(void * reply);
+    //void bind_reply(void * reply);
     
     int type();
 
@@ -73,24 +73,18 @@ using SharedPtrRedisReply = std::shared_ptr<RedisReply>;
 
 class RedisClient
 {
-friend class RedisList;
-
 public:
-    RedisClient(); 
+    RedisClient(const char * ip, int port = 6379, const char * prefix = "", int timeout_ms = 1500); 
     virtual ~RedisClient();
 
     const char * get_error();
 
     const char * prefix();
 
-    bool connect(const char * ip, int port = 6379, const char * prefix = "", int timeout_ms = 1500);
-    void close();
-    bool is_connected();
-
     bool auth(const std::string & passwd);
 
     bool set(const std::string & key, const std::string & value, int expire_sec = 0);
-    bool get(const std::string & key, std::string & value);
+    bool get(const std::string & key, std::string * value);
     bool del(const std::string & key, int * value = nullptr);
     bool exists(const std::string & key, int * value);
 
@@ -106,12 +100,17 @@ public:
     SharedPtrRedisReply exec_command_argv(int argc, const char ** argv, const size_t * argvlen);
 
 protected:
+    //bool connect(const char * ip, int port = 6379, const char * prefix = "", int timeout_ms = 1500);
+    //void close();
+    //bool is_connected();
+
+protected:
     detail::RedisClientImpl * _impl;
 };
 
 }   // namespace redisclient
 
-#include <RedisClient/impl/RedisClient.h>
+#include <RedisClient/impl/RedisClient.hpp>
 
 #endif  // __REDISCLIENT_H__
 

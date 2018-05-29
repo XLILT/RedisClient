@@ -122,7 +122,7 @@ public:
 
 }   // namespace redisclient
 
-#include <RedisClient/impl/RedisStructure.h>
+#include <RedisClient/impl/RedisStructure.hpp>
 
 #endif  // __REDISSTRUCTURE_H__
 
